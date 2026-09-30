@@ -139,7 +139,11 @@ export async function proxy(request: NextRequest) {
   const urlHasCountryCode = firstSegment ? regionMap.has(firstSegment) : false
 
   // 1. If URL explicitly contains default country code (e.g. /in/shop), 301 redirect to clean URL (/shop)
-  if (urlHasCountryCode && firstSegment === defaultRegion) {
+  // NEVER redirect POST or Server Action requests with 301/302/307
+  const isPostOrAction =
+    request.method === 'POST' || Boolean(request.headers.get('next-action'))
+
+  if (!isPostOrAction && urlHasCountryCode && firstSegment === defaultRegion) {
     let cleanPath = request.nextUrl.pathname.slice(defaultRegion.length + 1)
     if (!cleanPath.startsWith('/')) {
       cleanPath = `/${cleanPath}`

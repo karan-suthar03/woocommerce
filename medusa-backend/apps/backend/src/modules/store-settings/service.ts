@@ -95,24 +95,6 @@ class StoreSettingsModuleService extends MedusaService({
     }
 
     // 3. Environment Variable Defaults
-    if (key === "razorpay.mode") {
-      return process.env.RAZORPAY_MODE || "test"
-    }
-    if (key === "razorpay.key_id") {
-      return process.env.RAZORPAY_TEST_KEY_ID || process.env.RAZORPAY_ID || ""
-    }
-    if (key === "razorpay.key_secret") {
-      const sec = process.env.RAZORPAY_TEST_KEY_SECRET || process.env.RAZORPAY_SECRET || ""
-      return decryptSecret ? sec : maskSecret(sec)
-    }
-    if (key === "razorpay.webhook_secret") {
-      const sec = process.env.RAZORPAY_TEST_WEBHOOK_SECRET || process.env.RAZORPAY_WEBHOOK_SECRET || ""
-      return decryptSecret ? sec : maskSecret(sec)
-    }
-    if (key === "razorpay.auto_capture") {
-      return process.env.RAZORPAY_AUTO_CAPTURE || "true"
-    }
-
     // SMTP Settings defaults
     if (key === "smtp.host") {
       return process.env.SMTP_HOST || ""
@@ -145,11 +127,6 @@ class StoreSettingsModuleService extends MedusaService({
 
   async getAllSettings(includeDecryptedSecrets: boolean = false): Promise<Record<string, { value: string; is_secret: boolean; raw_masked?: string }>> {
     const keys = [
-      "razorpay.mode",
-      "razorpay.key_id",
-      "razorpay.key_secret",
-      "razorpay.webhook_secret",
-      "razorpay.auto_capture",
       "smtp.host",
       "smtp.port",
       "smtp.user",
@@ -164,7 +141,7 @@ class StoreSettingsModuleService extends MedusaService({
       "store.default_currency",
     ]
 
-    const secretKeys = new Set(["razorpay.key_secret", "razorpay.webhook_secret", "smtp.password"])
+    const secretKeys = new Set(["smtp.password"])
     const result: Record<string, { value: string; is_secret: boolean; raw_masked?: string }> = {}
 
     for (const key of keys) {

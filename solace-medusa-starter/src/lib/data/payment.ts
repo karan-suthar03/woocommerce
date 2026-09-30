@@ -1,12 +1,10 @@
 'use server'
 
-import { cache } from 'react'
-
 import { sdk } from '@lib/config'
 import { getAuthHeaders } from './cookies'
 
-// Shipping actions
-export const listCartPaymentMethods = cache(async function (regionId: string) {
+// Shipping / payment actions
+export async function listCartPaymentMethods(regionId: string) {
   return sdk.store.payment
     .listPaymentProviders(
       { region_id: regionId },
@@ -16,7 +14,7 @@ export const listCartPaymentMethods = cache(async function (regionId: string) {
     .catch(() => {
       return null
     })
-})
+}
 
 /**
  * verifyRazorpayPayment

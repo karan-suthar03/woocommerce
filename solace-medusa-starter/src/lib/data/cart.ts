@@ -25,11 +25,15 @@ export async function retrieveCart() {
 
   const authHeaders = await getAuthHeaders()
 
-  const cart = await sdk.store.cart
+  let cart = await sdk.store.cart
     .retrieve(cartId, {}, { next: { tags: ['cart'] }, ...authHeaders })
     .then(({ cart }) => cart)
-    .catch(() => {
-      return null
+    .catch(async () => {
+      // Fallback: try without authHeaders in case of cart authorization mismatch
+      return sdk.store.cart
+        .retrieve(cartId, {}, { next: { tags: ['cart'] } })
+        .then(({ cart }) => cart)
+        .catch(() => null)
     })
 
   if (cart) {
@@ -147,7 +151,7 @@ export async function addToCart({
   const authHeaders = await getAuthHeaders()
   console.log('[addToCart] Auth headers prepared:', Object.keys(authHeaders))
 
-  await sdk.store.cart
+  const updatedCart = await sdk.store.cart
     .createLineItem(
       cart.id,
       {
@@ -157,14 +161,20 @@ export async function addToCart({
       {},
       authHeaders
     )
-    .then(() => {
+    .then(async ({ cart: resCart }) => {
       console.log('[addToCart] Successfully added item to cart')
       revalidateTag('cart', 'max')
+      if (resCart.items?.length) {
+        resCart.items = await enrichLineItems(resCart.items, resCart.region_id!)
+      }
+      return resCart
     })
     .catch((error) => {
       console.error('[addToCart] Error adding to cart:', error)
       medusaError(error)
     })
+
+  return updatedCart
 }
 
 export async function addToCartCheapestVariant({
@@ -227,7 +237,7 @@ export async function addToCartCheapestVariant({
       }
     }
 
-    await addToCart({
+    const updatedCart = await addToCart({
       variantId: cheapestVariant.id, // Add the cheapest variant to the cart
       quantity: 1,
       countryCode,
@@ -236,6 +246,7 @@ export async function addToCartCheapestVariant({
     return {
       success: true,
       message: 'Product added to cart',
+      cart: updatedCart,
     }
   } catch (error) {
     console.error('Error adding product to cart:', error)
@@ -265,12 +276,18 @@ export async function updateLineItem({
 
   const authHeaders = await getAuthHeaders()
 
-  await sdk.store.cart
+  const updatedCart = await sdk.store.cart
     .updateLineItem(cartId, lineId, { quantity }, {}, authHeaders)
-    .then(() => {
+    .then(async ({ cart }) => {
       revalidateTag('cart', 'max')
+      if (cart.items?.length) {
+        cart.items = await enrichLineItems(cart.items, cart.region_id!)
+      }
+      return cart
     })
     .catch(medusaError)
+
+  return updatedCart
 }
 
 export async function deleteLineItem(lineId: string) {
@@ -285,14 +302,19 @@ export async function deleteLineItem(lineId: string) {
 
   const authHeaders = await getAuthHeaders()
 
-  await sdk.store.cart
+  const updatedCart = await sdk.store.cart
     .deleteLineItem(cartId, lineId, {}, authHeaders)
-    .then(() => {
+    .then(async ({ parent: cart }) => {
       revalidateTag('cart', 'max')
+      if (cart?.items?.length) {
+        cart.items = await enrichLineItems(cart.items, cart.region_id!)
+      }
+      return cart
     })
     .catch(medusaError)
 
   revalidateTag('cart', 'max')
+  return updatedCart
 }
 
 export async function enrichLineItems(
@@ -604,35 +626,55 @@ export async function placeOrder() {
   await new Promise((resolve) => setTimeout(resolve, INITIAL_DELAY_MS))
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    const cartRes = await sdk.store.cart
-      .complete(cartId, {}, authHeaders)
-      .then((cartRes) => {
-        revalidateTag('cart')
-        return cartRes
-      })
-      .catch(medusaError)
+    try {
+      const cartRes = await sdk.store.cart.complete(cartId, {}, authHeaders)
 
-    if (cartRes?.type === 'order') {
-      // ── Success path ──────────────────────────────────────────────────────
-      // removeCartId() clears the _medusa_cart_id cookie so the cart header
-      // shows 0 items immediately after the redirect to /order/confirmed/[id].
-      await removeCartId()
-      return JSON.parse(JSON.stringify(cartRes.order))
-    }
+      if (cartRes?.type === 'order') {
+        // ── Success path ──────────────────────────────────────────────────────
+        // removeCartId() clears the _medusa_cart_id cookie so the cart header
+        // shows 0 items immediately after the redirect to /order/confirmed/[id].
+        revalidateTag('cart', 'max')
+        await removeCartId()
+        return JSON.parse(JSON.stringify(cartRes.order))
+      }
 
-    // Cart is still in a non-order state; wait before retrying
-    if (attempt < MAX_ATTEMPTS) {
-      const paymentStatus = (cartRes as any)?.cart?.payment_collection?.payment_sessions?.[0]?.status
-      console.log(
-        `[placeOrder] cart.complete returned type='${cartRes?.type}' (payment status: ${paymentStatus ?? 'unknown'}) on attempt ${attempt}/${MAX_ATTEMPTS}. Retrying in ${RETRY_DELAY_MS}ms…`
-      )
-      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS))
+      // If cartRes returned type: 'cart' without throwing, check if status is pending
+      if (attempt < MAX_ATTEMPTS) {
+        const paymentStatus = (cartRes as any)?.cart?.payment_collection?.payment_sessions?.[0]?.status
+        console.log(
+          `[placeOrder] cart.complete returned type='${cartRes?.type}' (payment status: ${paymentStatus ?? 'unknown'}) on attempt ${attempt}/${MAX_ATTEMPTS}. Retrying in ${RETRY_DELAY_MS}ms…`
+        )
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS))
+      }
+    } catch (err: any) {
+      const errMsg = (
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        ''
+      ).toLowerCase()
+
+      const isRetryable =
+        errMsg.includes('not authorized') ||
+        errMsg.includes('requires_more') ||
+        errMsg.includes('payment_session') ||
+        errMsg.includes('payment session')
+
+      if (isRetryable && attempt < MAX_ATTEMPTS) {
+        console.log(
+          `[placeOrder] cart.complete attempt ${attempt}/${MAX_ATTEMPTS} payment settling: ${err?.message}. Retrying in ${RETRY_DELAY_MS}ms…`
+        )
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS))
+        continue
+      }
+
+      // Non-retryable error or final attempt exhausted — preserve standard Medusa error handling
+      return medusaError(err)
     }
   }
 
   // All retries exhausted — payment was verified but Medusa never transitioned
-  // the cart to an order. This usually means a configuration issue on the
-  // backend (e.g., the payment provider did not return AUTHORIZED status).
+  // the cart to an order.
   throw new Error(
     'Unable to complete your order. Your payment was received but the order ' +
       'could not be created. Please contact support with your payment details.'

@@ -38,9 +38,104 @@ index 3657949..95bfb4a 100644
          if (!(0, utils_1.isDefined)(options.automatic_expiry_period)) {
              if (!(0, utils_1.isDefined)(options.manual_expiry_period)) {
                  throw new utils_1.MedusaError(utils_1.MedusaErrorTypes.INVALID_ARGUMENT, "Required option `manual_expiry_period` is missing in Razorpay plugin");
-@@ -79,16 +78,18 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
-         }
-     }
+@@ -57,23 +57,75 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
+-    async capturePayment(input) {
+-        const { razorpayOrder, paymentSession } = await this.getPaymentSessionAndOrderFromInput(input);
+-        const paymentsResponse = await this.razorpay_.orders.fetchPayments(razorpayOrder.id);
+-        const possibleCaptures = paymentsResponse.items?.filter((item) => item.status === "authorized");
+-        const result = possibleCaptures?.map(async (payment) => {
+-            const { id, amount, currency } = payment;
+-            const toPay = this.getToPay(amount, currency);
+-            const paymentCaptured = await this.razorpay_.payments.capture(id, toPay, currency);
+-            return paymentCaptured;
+-        });
+-        if (result) {
+-            const syncResult = await this.syncPaymentSession(paymentSession.id, razorpayOrder.id);
+-            const returrnedResult = {
+-                data: {
+-                    razorpayOrder: syncResult.razorpayOrder
+-                }
+-            };
+-            return returrnedResult;
+-        }
+-        else {
+-            throw new utils_1.MedusaError(utils_1.MedusaError.Types.NOT_FOUND, `No payments found for order ${razorpayOrder.id}`);
+-        }
+-    }
++    async capturePayment(input) {
++        this.logger.info(`[Razorpay Provider] capturePayment invoked with input: ${JSON.stringify(input)}`);
++        let razorpayOrder = input?.data?.razorpayOrder;
++        if (!razorpayOrder) {
++            const orderId = input?.data?.id ?? input?.data?.order_id;
++            if (orderId) {
++                try {
++                    razorpayOrder = await this.razorpay_.orders.fetch(orderId);
++                } catch (e) {
++                    this.logger.warn(`[Razorpay Provider] capturePayment: could not fetch order ${orderId}: ${e?.message}`);
++                }
++            }
++        }
++
++        if (!razorpayOrder?.id) {
++            throw new utils_1.MedusaError(
++                utils_1.MedusaError.Types.INVALID_DATA,
++                "No Razorpay order found in payment data to capture"
++            );
++        }
++
++        const razorpayOrderId = razorpayOrder.id;
++        let latestOrder = razorpayOrder;
++        try {
++            latestOrder = await this.razorpay_.orders.fetch(razorpayOrderId);
++        } catch (e) {
++            this.logger.warn(`[Razorpay Provider] capturePayment: error fetching latest order ${razorpayOrderId}: ${e?.message}`);
++        }
++
++        let fetchPayments;
++        try {
++            fetchPayments = await this.razorpay_.orders.fetchPayments(razorpayOrderId);
++        } catch (error) {
++            throw new utils_1.MedusaError(
++                utils_1.MedusaError.Types.INVALID_DATA,
++                `Failed to retrieve payments for Razorpay order ${razorpayOrderId}: ${error.message}`
++            );
++        }
++
++        const payments = fetchPayments?.items || [];
++        const capturedPayments = payments.filter((item) => item.status === "captured");
++        const authorizedPayments = payments.filter((item) => item.status === "authorized");
++
++        let result = [];
++        if (capturedPayments.length > 0) {
++            this.logger.info(
++                `[Razorpay Provider] capturePayment: Order ${razorpayOrderId} already has captured payments: ${capturedPayments.map((p) => p.id).join(", ")}`
++            );
++            result = capturedPayments;
++        } else if (authorizedPayments.length > 0) {
++            const amount = input.amount ?? latestOrder.amount;
++            const currency_code = (input.currency_code ?? latestOrder.currency ?? "INR").toUpperCase();
++            const toPay = this.getToPay(amount, currency_code);
++            result = await Promise.all(
++                authorizedPayments.map(async (payment) => {
++                    const { id } = payment;
++                    const capture = await this.razorpay_.payments.capture(id, toPay, currency_code);
++                    return capture;
++                })
++            );
++        } else {
++            throw new utils_1.MedusaError(
++                utils_1.MedusaError.Types.NOT_FOUND,
++                `No authorized or captured payments found for Razorpay order ${razorpayOrderId}`
++            );
++        }
++
++        return {
++            data: {
++                razorpayOrder: latestOrder,
++                razorpayPayment: result
++            }
++        };
++    }
      async authorizePayment(input) {
 +        this.logger.info(`[Razorpay Provider] authorizePayment invoked with input: ${JSON.stringify(input)}`);
          const { razorpayOrder, paymentSession } = await this.getPaymentSessionAndOrderFromInput(input);
@@ -197,25 +292,23 @@ index 3657949..95bfb4a 100644
 +            throw new utils_1.MedusaError(utils_1.MedusaError.Types.INVALID_DATA, `Failed to process refund with Razorpay: ${error.message}`);
 +        }
      }
--    async retrievePayment(input) {
+     async retrievePayment(input) {
 -        const { razorpayOrder } = await this.getPaymentSessionAndOrderFromInput(input);
-+    async capturePayment(input) {
-+        const { paymentSession, razorpayOrder } = await this.getPaymentSessionAndOrderFromInput(input);
-+        const { amount, currency_code } = input;
-+        const toPay = this.getToPay(amount, currency_code);
-+        const fetchPayments = await this.razorpay_.orders.fetchPayments(razorpayOrder.id);
-+        const possibleCaptures = fetchPayments.items?.filter((item) => item.status === "authorized");
-+        const result = await Promise.all(possibleCaptures?.map(async (payment) => {
-+            const { id } = payment;
-+            const capture = await this.razorpay_.payments.capture(id, toPay, currency_code);
-+            return capture;
-+        }));
-+        const syncResult = await this.syncPaymentSession(paymentSession.id, razorpayOrder.id);
++        let razorpayOrder = input?.data?.razorpayOrder;
++        if (!razorpayOrder?.id && (input?.data?.id || input?.data?.order_id)) {
++            try {
++                razorpayOrder = await this.razorpay_.orders.fetch(input?.data?.id || input?.data?.order_id);
++            } catch (e) {}
++        }
++        if (razorpayOrder?.id) {
++            try {
++                razorpayOrder = await this.razorpay_.orders.fetch(razorpayOrder.id);
++            } catch (e) {}
++        }
          return {
              data: {
 -                razorpayOrder: razorpayOrder
-+                razorpayOrder: syncResult.razorpayOrder,
-+                razorpayPayment: result
++                razorpayOrder: razorpayOrder ?? input.data
              }
          };
      }

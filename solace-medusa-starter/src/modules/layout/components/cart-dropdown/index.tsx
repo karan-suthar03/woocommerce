@@ -216,16 +216,16 @@ const CartDropdown = ({
     setIsMounted(true)
   }, [])
 
-  // Synchronization with SSR cart data
+  // Synchronization with SSR cart data (only initialize if client store is empty)
   useEffect(() => {
-    if (cartProp) {
+    if (cartProp && !storeCart) {
       setCart(cartProp)
     }
-  }, [cartProp, setCart])
+  }, [cartProp, storeCart, setCart])
 
-  // Refresh whenever the drawer is opened
+  // Refresh whenever the drawer is opened if no items loaded yet
   useEffect(() => {
-    if (isOpenCartDropdown) {
+    if (isOpenCartDropdown && (!storeCart || !storeCart.items?.length)) {
       refreshCart()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

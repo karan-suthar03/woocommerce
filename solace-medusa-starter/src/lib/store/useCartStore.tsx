@@ -32,7 +32,13 @@ export const useCartStore = create<CartStore>((set, get) => ({
   refreshCart: async () => {
     set({ isCartLoading: true })
     try {
-      const res = await fetch('/api/cart', { cache: 'no-store' })
+      const res = await fetch('/api/cart', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+          Pragma: 'no-cache',
+        },
+      })
       if (res.ok) {
         const data = await res.json()
         set({ cart: data.cart ?? null })

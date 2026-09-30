@@ -52,7 +52,7 @@ export default function ProductActions({
   colors,
   disabled,
 }: ProductActionsProps) {
-  const { openCartDropdown, refreshCart } = useCartStore()
+  const { openCartDropdown, setCart, refreshCart } = useCartStore()
   const { setSelectedVariant } = useProductVariant()
   const actionsRef = useRef<HTMLDivElement>(null)
   const [qty, setQty] = useState(1)
@@ -97,7 +97,7 @@ export default function ProductActions({
 
     setIsAdding(true)
     try {
-      await addToCart({
+      const updatedCart = await addToCart({
         variantId: selectedVariant.id,
         quantity: qty,
         countryCode,
@@ -105,8 +105,12 @@ export default function ProductActions({
       
       console.log('[ProductActions] Successfully added to cart')
       
-      // Refresh Zustand cart state so drawer shows the new item immediately
-      await refreshCart()
+      // Immediately set the fresh enriched cart in Zustand, then open drawer
+      if (updatedCart) {
+        setCart(updatedCart)
+      } else {
+        await refreshCart()
+      }
       openCartDropdown()
       toast('success', 'Product was added to cart!')
     } catch (error) {

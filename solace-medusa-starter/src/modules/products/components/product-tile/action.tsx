@@ -20,7 +20,7 @@ export function ProductActions({
   variantCount?: number
 }) {
   const [isAddingToCart, setIsAddingToCart] = useState(false)
-  const { openCartDropdown } = useCartStore()
+  const { openCartDropdown, setCart, refreshCart } = useCartStore()
   const countryCode = useParams().countryCode as string
 
   // ── Multi-variant: send the user to the PDP to choose their variant ──────
@@ -55,10 +55,13 @@ export function ProductActions({
       })
 
       if (result.success) {
-        setTimeout(() => {
-          openCartDropdown()
-          toast('success', result.message)
-        }, 1000)
+        if (result.cart) {
+          setCart(result.cart)
+        } else {
+          await refreshCart()
+        }
+        openCartDropdown()
+        toast('success', result.message || 'Product was added to cart!')
       } else {
         toast('error', result.error)
       }

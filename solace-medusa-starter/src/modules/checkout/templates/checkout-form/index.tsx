@@ -18,12 +18,9 @@ export default async function CheckoutForm({
     return null
   }
 
-  const shippingMethods = await listCartShippingMethods(cart.id)
-  const paymentMethods = await listCartPaymentMethods(cart.region?.id ?? '')
-
-  if (!shippingMethods || !paymentMethods) {
-    return null
-  }
+  const regionId = cart.region?.id ?? cart.region_id ?? ''
+  const shippingMethods = (await listCartShippingMethods(cart.id)) || []
+  const paymentMethods = (await listCartPaymentMethods(regionId)) || []
 
   // Automatically apply default shipping method if address is set but shipping_methods is empty.
   // NOTE: We call the SDK directly here instead of setShippingMethod() because

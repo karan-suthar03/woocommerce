@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react"
 import { defineRouteConfig } from "@medusajs/admin-sdk"
 import { Container, Heading, Text, Button } from "@medusajs/ui"
-import { RazorpayTab } from "./components/razorpay-tab"
 import { DataResetTab } from "./components/data-reset-tab"
 import { GeneralTab } from "./components/general-tab"
 import { SmtpTab } from "./components/smtp-tab"
@@ -23,10 +22,10 @@ const SettingsIcon = () => (
   </svg>
 )
 
-type ActiveTab = "razorpay" | "smtp" | "general" | "reset"
+type ActiveTab = "smtp" | "general" | "reset"
 
 const StoreSettingsPage = () => {
-  const [activeTab, setActiveTab] = useState<ActiveTab>("razorpay")
+  const [activeTab, setActiveTab] = useState<ActiveTab>("smtp")
   const [settings, setSettings] = useState<Record<string, any>>({})
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [isSaving, setIsSaving] = useState<boolean>(false)
@@ -84,7 +83,7 @@ const StoreSettingsPage = () => {
             <SettingsIcon /> Store Settings
           </Heading>
           <Text className="text-ui-fg-subtle text-sm mt-1">
-            Manage Razorpay gateway, SMTP email configuration, general store settings, and protected data resets.
+            Manage SMTP email configuration, general store settings, and protected data resets.
           </Text>
         </div>
 
@@ -100,17 +99,6 @@ const StoreSettingsPage = () => {
 
       {/* Navigation Tabs Bar */}
       <div className="flex items-center gap-2 border-b border-ui-border-base pb-2 overflow-x-auto">
-        <button
-          onClick={() => setActiveTab("razorpay")}
-          className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors flex items-center gap-2 ${
-            activeTab === "razorpay"
-              ? "bg-ui-bg-base-hover text-ui-fg-base border border-ui-border-base shadow-xs"
-              : "text-ui-fg-subtle hover:text-ui-fg-base hover:bg-ui-bg-subtle"
-          }`}
-        >
-          <span>💳</span> Razorpay Configuration
-        </button>
-
         <button
           onClick={() => setActiveTab("smtp")}
           className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors flex items-center gap-2 ${
@@ -164,14 +152,6 @@ const StoreSettingsPage = () => {
         </Container>
       ) : (
         <>
-          {activeTab === "razorpay" && (
-            <RazorpayTab
-              settings={settings}
-              onSave={handleSaveSettings}
-              isSaving={isSaving}
-            />
-          )}
-
           {activeTab === "smtp" && (
             <SmtpTab
               settings={settings}
