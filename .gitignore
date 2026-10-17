@@ -17,3 +17,9 @@ check-db.js
 # OS files
 .DS_Store
 Thumbs.db
+
+# Local / generated output (files already tracked stay tracked)
+*.log
+.turbo/
+.claude/
+medusa-backend/apps/backend/static/
