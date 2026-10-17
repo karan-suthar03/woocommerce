@@ -47,12 +47,13 @@ const CancelOrderButton: React.FC<CancelOrderButtonProps> = ({ order }) => {
     }
 
     // Check payment status - order must be paid
-    const paymentStatus = (order.payment_collections?.[0]?.status ?? order.payment_status) as string
+    const paymentStatus = (order.payment_status ?? order.payment_collections?.[0]?.status) as string
     const isPaid =
       paymentStatus === 'captured' ||
       paymentStatus === 'authorized' ||
       paymentStatus === 'paid' ||
-      paymentStatus === 'completed'
+      paymentStatus === 'completed' ||
+      paymentStatus === 'partially_captured'
 
     if (!isPaid) {
       return false

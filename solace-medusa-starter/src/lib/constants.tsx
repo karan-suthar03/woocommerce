@@ -122,6 +122,12 @@ export const isRazorpay = (providerId?: string) => {
 export const PAYMENT_STATUS_LABELS: Record<string, string> = {
   authorized: 'Paid',
   captured: 'Paid',
+  completed: 'Paid',
+  partially_authorized: 'Partially Paid',
+  partially_captured: 'Partially Paid',
+  partially_refunded: 'Partially Refunded',
+  refunded: 'Refunded',
+  failed: 'Failed',
   awaiting: 'Pending',
   pending: 'Pending',
   not_paid: 'Pending',

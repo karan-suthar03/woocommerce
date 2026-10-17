@@ -41,7 +41,7 @@ export default function OrderCard({
   )
 
   const paymentStatus =
-    order.payment_collections?.[0]?.status ?? order.payment_status
+    order.payment_status ?? order.payment_collections?.[0]?.status
 
   return (
     <Box className="flex flex-col bg-primary border border-neutral-200 dark:border-neutral-800 rounded-xl shadow-xs overflow-hidden hover:shadow-md transition-all duration-200">

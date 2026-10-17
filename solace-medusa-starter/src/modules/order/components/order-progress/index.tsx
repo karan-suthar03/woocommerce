@@ -145,14 +145,24 @@ const OrderProgress: React.FC<OrderProgressProps> = ({ order }) => {
     order.status?.toLowerCase() === 'cancelled' ||
     (order as any).fulfillment_status?.toLowerCase() === 'canceled'
 
+  // order.payment_status is what the admin shows. A captured payment collection
+  // reports "completed", which the old list missed, so paid orders looked unpaid.
   const paymentStatus = (
-    order.payment_collections?.[0]?.status ??
     order.payment_status ??
+    order.payment_collections?.[0]?.status ??
     ''
   ).toLowerCase()
   const isPaid =
-    ['captured', 'authorized', 'paid'].includes(paymentStatus) ||
-    order.status?.toLowerCase() === 'completed'
+    [
+      'authorized',
+      'partially_authorized',
+      'captured',
+      'partially_captured',
+      'completed',
+      'partially_refunded',
+      'refunded',
+      'paid',
+    ].includes(paymentStatus) || order.status?.toLowerCase() === 'completed'
 
   const fulfillmentStatus = (
     (order as any).fulfillment_status ?? ''

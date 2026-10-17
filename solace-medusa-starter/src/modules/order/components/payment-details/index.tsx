@@ -1,4 +1,4 @@
-import { paymentInfoMap } from '@lib/constants'
+import { paymentInfoMap, getPaymentStatusLabel } from '@lib/constants'
 import { HttpTypes } from '@medusajs/types'
 import { Box } from '@modules/common/components/box'
 import { Button } from '@modules/common/components/button'
@@ -10,7 +10,7 @@ type PaymentDetailsProps = {
 
 const PaymentDetails = ({ order }: PaymentDetailsProps) => {
   const payment = order.payment_collections?.[0]?.payments?.[0]
-  const paymentStatus = order.payment_collections?.[0]?.status ?? order.payment_status
+  const paymentStatus = order.payment_status ?? order.payment_collections?.[0]?.status
 
   const paymentTitle = payment?.provider_id
     ? paymentInfoMap[payment.provider_id]?.title || payment.provider_id
@@ -32,7 +32,7 @@ const PaymentDetails = ({ order }: PaymentDetailsProps) => {
           <div className="flex items-center justify-between text-neutral-600 dark:text-neutral-400">
             <span>Payment Status</span>
             <span className="font-semibold text-emerald-600 dark:text-emerald-400 uppercase text-xs">
-              {paymentStatus}
+              {getPaymentStatusLabel(paymentStatus)}
             </span>
           </div>
         )}

@@ -20,7 +20,7 @@ export default function OrderCompletedTemplate({
   const [copied, setCopied] = useState(false)
 
   const paymentStatus =
-    order.payment_collections?.[0]?.status ?? order.payment_status
+    order.payment_status ?? order.payment_collections?.[0]?.status
 
   const formattedDate = new Date(order.created_at).toLocaleDateString('en-IN', {
     day: '2-digit',
