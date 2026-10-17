@@ -12,10 +12,10 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ settings, onSave, isSavi
     settings["store.maintenance_mode"]?.value === "true"
   )
   const [brandName, setBrandName] = useState<string>(
-    settings["store.brand_name"]?.value || "Solace E-Commerce Store"
+    settings["store.brand_name"]?.value || "Swami Om Enterprises"
   )
   const [supportEmail, setSupportEmail] = useState<string>(
-    settings["store.support_email"]?.value || "support@solace-store.com"
+    settings["store.support_email"]?.value || "support@swamiomenterprises.in"
   )
   const [supportPhone, setSupportPhone] = useState<string>(
     settings["store.support_phone"]?.value || ""
@@ -38,8 +38,8 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ settings, onSave, isSavi
 
   useEffect(() => {
     setMaintenanceMode(settings["store.maintenance_mode"]?.value === "true")
-    setBrandName(settings["store.brand_name"]?.value || "Solace E-Commerce Store")
-    setSupportEmail(settings["store.support_email"]?.value || "support@solace-store.com")
+    setBrandName(settings["store.brand_name"]?.value || "Swami Om Enterprises")
+    setSupportEmail(settings["store.support_email"]?.value || "support@swamiomenterprises.in")
     setSupportPhone(settings["store.support_phone"]?.value || "")
     setDefaultCurrency(settings["store.default_currency"]?.value || "INR")
   }, [settings])

@@ -118,8 +118,8 @@ class StoreSettingsModuleService extends MedusaService({
 
     // General Store Setting defaults
     if (key === "store.maintenance_mode") return "false"
-    if (key === "store.brand_name") return "Solace E-Commerce Store"
-    if (key === "store.support_email") return "support@solace-store.com"
+    if (key === "store.brand_name") return "Swami Om Enterprises"
+    if (key === "store.support_email") return "support@swamiomenterprises.in"
     if (key === "store.logo_url") return ""
 
     return ""
