@@ -27,6 +27,7 @@ Status: **Fixed** (code changed), **Deployed** (live server updated), **Open** (
 | 20 | Account | "Change password" on the account page always failed ("Invalid token") | It sent the login session token to Medusa's reset endpoint, which only accepts reset tokens | New authenticated route `POST /store/customer/change-password` (checks current password, then updates); storefront uses it. Verified: no login 401, wrong password 400, correct 200, new password logs in, old one rejected | Fixed (local, not deployed) |
 | 21 | Auth | Forgot-password also fired Medusa's own reset flow in the background, whose token/event nothing used | Leftover fetch to `localhost/auth/customer/emailpass/reset-password` | Removed | Fixed (local, not deployed) |
 | 22 | Branding | Support email on the live site is `support@solace-store.com` (starter-template placeholder), served to the storefront by `/store-info` | Setting `store.support_email` never changed from the template | Owner to confirm the real support address, then set it in Admin → Store Settings → General | Open (owner decision) |
+| 23 | Payments | Every Razorpay webhook was processed twice (double Razorpay API calls, duplicated log lines) | Debug subscriber `payment-webhook-logger.ts` re-ran `getWebhookActionAndData` on each event just to log it | Removed the debug subscriber; the plugin already logs each event once | Fixed (local, not deployed) |
 
 ## Verified working
 - Password reset (live): link sets the new password, login works with it, expired link rejected.
