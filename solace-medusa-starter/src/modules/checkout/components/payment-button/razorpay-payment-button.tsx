@@ -3,7 +3,7 @@
 import React, { useCallback, useMemo, useState, useRef, useContext } from 'react'
 import { useRazorpay } from 'react-razorpay'
 import { HttpTypes } from '@medusajs/types'
-import { placeOrder } from '@lib/data/cart'
+import { getUnavailableCartItems, placeOrder } from '@lib/data/cart'
 import { verifyRazorpayPayment } from '@lib/data/payment'
 import {
   getCustomerFriendlyError,
@@ -238,6 +238,25 @@ const RazorpayPaymentButton: React.FC<RazorpayPaymentButtonProps> = ({
     }
 
     setSubmitting(true)
+
+    // Razorpay takes the money at once, but stock is only checked when the
+    // order is created — so catch sold-out items before the customer pays.
+    try {
+      setProcessingState('Checking availability...')
+      const unavailable = await getUnavailableCartItems()
+      if (unavailable.length) {
+        setErrorMessage(
+          `Sorry, ${unavailable.join(', ')} ${unavailable.length > 1 ? 'are' : 'is'} no longer available in the quantity in your bag. Please update your bag before paying.`
+        )
+        setSubmitting(false)
+        setProcessingState(null)
+        return
+      }
+    } catch (stockError) {
+      // A failed check must not block payment; the order step still validates stock.
+      console.warn('[Razorpay] Stock pre-check failed, continuing:', stockError)
+    }
+    setProcessingState(null)
 
     // Reset idempotency guard for a fresh payment attempt
     orderPlacedRef.current = false

@@ -1,5 +1,5 @@
 diff --git a/node_modules/medusa-plugin-razorpay-v2/.medusa/server/src/providers/payment-razorpay/src/core/razorpay-base.js b/node_modules/medusa-plugin-razorpay-v2/.medusa/server/src/providers/payment-razorpay/src/core/razorpay-base.js
-index 3657949..421be76 100644
+index 3657949..d6ff406 100644
 --- a/node_modules/medusa-plugin-razorpay-v2/.medusa/server/src/providers/payment-razorpay/src/core/razorpay-base.js
 +++ b/node_modules/medusa-plugin-razorpay-v2/.medusa/server/src/providers/payment-razorpay/src/core/razorpay-base.js
 @@ -7,6 +7,8 @@ const utils_1 = require("@medusajs/framework/utils");
@@ -87,7 +87,7 @@ index 3657949..421be76 100644
 +                utils_1.MedusaError.Types.INVALID_DATA,
 +                "No Razorpay order found in payment data to capture"
 +            );
-         }
++        }
 +
 +        const razorpayOrderId = razorpayOrder.id;
 +        let latestOrder = razorpayOrder;
@@ -95,7 +95,7 @@ index 3657949..421be76 100644
 +            latestOrder = await this.razorpay_.orders.fetch(razorpayOrderId);
 +        } catch (e) {
 +            this.logger.warn(`[Razorpay Provider] capturePayment: error fetching latest order ${razorpayOrderId}: ${e?.message}`);
-+        }
+         }
 +
 +        let fetchPayments;
 +        try {
@@ -479,7 +479,7 @@ index 3657949..421be76 100644
                          amount: outstanding
                      }
                  };
-@@ -418,11 +567,12 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
+@@ -418,11 +567,26 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
                  return {
                      action: utils_1.PaymentActions.FAILED,
                      data: {
@@ -488,6 +488,20 @@ index 3657949..421be76 100644
                          amount: outstanding
                      }
                  };
++            // Medusa records a refund when the admin issues it and has no action
++            // for later refund status changes, so these are surfaced in the logs:
++            // a failed refund means the customer did not get their money back.
++            case "refund.created":
++            case "refund.processed": {
++                const refund = payload.refund?.entity;
++                logger.info(`[Razorpay Webhook] Refund ${refund?.id} ${event.split(".")[1]}: ${(refund?.amount ?? 0) / 100} ${refund?.currency ?? ""} on payment ${refund?.payment_id} (session ${sessionId})`);
++                return { action: utils_1.PaymentActions.NOT_SUPPORTED };
++            }
++            case "refund.failed": {
++                const refund = payload.refund?.entity;
++                logger.error(`[Razorpay Webhook] REFUND FAILED ${refund?.id}: ${(refund?.amount ?? 0) / 100} ${refund?.currency ?? ""} on payment ${refund?.payment_id} (session ${sessionId}) — customer was NOT refunded; retry from the Razorpay dashboard`);
++                return { action: utils_1.PaymentActions.NOT_SUPPORTED };
++            }
              default:
 +                logger.info(`[Razorpay Webhook] Unhandled event: ${event}`);
                  return { action: utils_1.PaymentActions.NOT_SUPPORTED };

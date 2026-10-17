@@ -704,3 +704,49 @@ export async function updateRegion(countryCode: string, currentPath: string) {
 
   redirect(getLocalizedPath(currentPath, countryCode))
 }
+
+/**
+ * Lists cart items that can no longer be bought in the quantity in the bag.
+ * Called right before the Razorpay popup opens: Razorpay captures the money
+ * immediately, while stock is only checked when the order is created, so a
+ * sold-out item caught here saves the customer from paying for nothing.
+ */
+export async function getUnavailableCartItems(): Promise<string[]> {
+  const cartId = await getCartId()
+  if (!cartId) {
+    return []
+  }
+
+  const authHeaders = await getAuthHeaders()
+  const { cart } = await sdk.store.cart.retrieve(
+    cartId,
+    { fields: "*items" },
+    { ...authHeaders, cache: "no-store" }
+  )
+  const items = cart.items ?? []
+  if (!items.length) {
+    return []
+  }
+
+  // Stock is only computed on the product endpoints, not on cart items.
+  const productIds = Array.from(new Set(items.map((i: any) => i.product_id).filter(Boolean)))
+  const { products } = await sdk.store.product.list(
+    {
+      id: productIds,
+      region_id: cart.region_id,
+      fields: "id,*variants,+variants.inventory_quantity",
+    } as any,
+    { ...authHeaders, cache: "no-store" }
+  )
+  const variants = new Map<string, any>()
+  for (const p of products) for (const v of p.variants ?? []) variants.set(v.id, v)
+
+  return items
+    .filter((item: any) => {
+      const v = variants.get(item.variant_id)
+      // Unknown stock never blocks payment; the order step still validates it.
+      if (!v || !v.manage_inventory || v.allow_backorder || typeof v.inventory_quantity !== "number") return false
+      return v.inventory_quantity < item.quantity
+    })
+    .map((item: any) => item.product_title ?? item.title)
+}
