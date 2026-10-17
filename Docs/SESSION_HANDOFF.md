@@ -31,7 +31,7 @@ Storefront: `src/lib/data/catalog-fetch.ts` (the only working cache path – see
 ### Production server
 - `ssh external-server` (key auth, `~/.ssh/config` alias → root@66.116.232.174). Shared root login – **owner's rule: confirm before changing production**; read-only checks are fine.
 - Same box runs storefront, backend, Postgres (127.0.0.1:5432, port also open to the internet – open item #13), Redis, nginx, and another project (`tripigo`) sharing the **2 CPUs**.
-- Repo: `/var/www/self` – currently on local branch **`deploy-20261017` @ `289b5c6`** (not on GitHub `main`). Old server edits are in `git stash` ("pre-deploy-20261017 local edits").
+- Repo: `/var/www/self` – currently on local branch **`deploy-20261017` @ latest `fix/payment-success-error`** (fork: github.com/karan-suthar03/woocommerce, PR into tejas1112001 `main`). Old server edits are in `git stash` ("pre-deploy-20261017 local edits").
 - pm2: `swami-backend` (cwd `medusa-backend/apps/backend/.medusa/server`, `npm run start`), `swami-frontend` (cwd `solace-medusa-starter`, `npm run start`). Logs: `pm2 jlist` → `pm_out_log_path`.
 - Domains: `swamiomenterprises.in` → storefront, `api.swamiomenterprises.in` → backend.
 - Env files: backend **source** `medusa-backend/apps/backend/.env` – `npm run build` **copies it over** `.medusa/server/.env` (edit both or the source). Storefront `solace-medusa-starter/.env.production` (NEXT_PUBLIC_* are baked at build → rebuild).
@@ -53,8 +53,8 @@ Storefront: `src/lib/data/catalog-fetch.ts` (the only working cache path – see
 
 ## 4. How to deploy (what was used all session)
 ```bash
-# local: bundle commits the server doesn't have yet (server HEAD = 289b5c6)
-git bundle create /tmp/d.bundle 289b5c6..HEAD
+# local: bundle commits the server doesn't have yet (check server HEAD first: `git rev-parse --short HEAD`; commits were rewritten 17 Oct, old 289b5c6 = 8f65362)
+git bundle create /tmp/d.bundle <server-HEAD>..HEAD
 scp /tmp/d.bundle external-server:/tmp/d.bundle
 ssh external-server
 cd /var/www/self
