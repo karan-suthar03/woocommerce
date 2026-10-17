@@ -2,6 +2,24 @@ import { authenticate, defineMiddlewares } from "@medusajs/framework/http"
 import type { MedusaRequest, MedusaResponse, MedusaNextFunction } from "@medusajs/framework/http"
 import multer from "multer"
 import { singleUseResetToken } from "../lib/password-reset"
+import { OTP_VERIFICATION_MODULE } from "../modules/otp-verification"
+
+// Sign-up must have passed the email OTP. The storefront used to check this
+// only in the browser, so POST /store/customers could be called directly.
+const requireVerifiedEmail = async (req: MedusaRequest, res: MedusaResponse, next: MedusaNextFunction) => {
+  const email = String((req.body as any)?.email ?? "").toLowerCase().trim()
+  const token = req.headers["x-verification-token"]
+  const otpService = req.scope.resolve(OTP_VERIFICATION_MODULE) as any
+  const verified =
+    !!email && typeof token === "string" && (await otpService.isEmailVerified(email, token))
+  if (!verified) {
+    return res.status(403).json({
+      type: "not_allowed",
+      message: "Email verification required. Please verify your email with the code we sent.",
+    })
+  }
+  next()
+}
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -37,6 +55,11 @@ export default defineMiddlewares({
       matcher: "/admin/media",
       method: ["POST"],
       middlewares: [logoUploadMiddleware],
+    },
+    {
+      matcher: "/store/customers",
+      method: ["POST"],
+      middlewares: [requireVerifiedEmail],
     },
     {
       matcher: "/store/customer/change-password",

@@ -127,7 +127,11 @@ export async function signup(
       password: password,
     })
 
-    const customHeaders = { authorization: `Bearer ${token}` }
+    // The backend re-checks the email OTP from this header before creating the customer.
+    const customHeaders = {
+      authorization: `Bearer ${token}`,
+      'x-verification-token': verificationToken,
+    }
 
     await sdk.store.customer.create(customerForm, {}, customHeaders)
 
