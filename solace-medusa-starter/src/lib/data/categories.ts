@@ -1,8 +1,7 @@
-import { sdk } from '@lib/config'
+import { catalogFetch } from './catalog-fetch'
 
 export const listCategories = async function () {
-  return sdk.store.category
-    .list({ fields: '+category_children' }, { next: { tags: ['categories'] } })
+  return catalogFetch<any>("/store/product-categories", { fields: '+category_children' }, "categories")
     .then(({ product_categories }) => product_categories)
 }
 
@@ -10,19 +9,19 @@ export const getCategoriesList = async function (
   offset: number = 0,
   limit: number = 100
 ) {
-  return sdk.store.category.list(
+  return catalogFetch<any>("/store/product-categories", 
     // TODO: Look into fixing the type
     // @ts-ignore
     { limit, offset },
-    { next: { tags: ['categories'] } }
+    "categories"
   )
 }
 
 export const getCategoryByHandle = async function (categoryHandle: string[]) {
-  return sdk.store.category.list(
+  return catalogFetch<any>("/store/product-categories", 
     // TODO: Look into fixing the type
     // @ts-ignore
     { handle: categoryHandle },
-    { next: { tags: ['categories'] } }
+    "categories"
   )
 }

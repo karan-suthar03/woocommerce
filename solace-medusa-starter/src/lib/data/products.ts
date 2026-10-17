@@ -1,6 +1,6 @@
 import { unstable_noStore as noStore } from 'next/cache'
 
-import { sdk } from '@lib/config'
+import { catalogFetch } from './catalog-fetch'
 import { HttpTypes } from '@medusajs/types'
 import { ProductFilters } from 'types/global'
 
@@ -16,15 +16,14 @@ export const getProductsById = async function ({
   ids: string[]
   regionId: string
 }) {
-  return sdk.store.product
-    .list(
+  return catalogFetch<any>("/store/products", 
       {
         id: ids,
         region_id: regionId,
         fields:
           '*variants.calculated_price,+variants.inventory_quantity,+variants.thumbnail,*variants,*variants.prices,*categories,+metadata',
       },
-      { next: { tags: ['products'] } }
+      "products"
     )
     .then(({ products }) => products)
 }
@@ -33,15 +32,14 @@ export const getProductByHandle = async function (
   handle: string,
   regionId: string
 ) {
-  const result = await sdk.store.product
-    .list(
+  const result = await catalogFetch<any>("/store/products", 
       {
         handle,
         region_id: regionId,
         fields:
           '*variants.calculated_price,+variants.inventory_quantity,+variants.thumbnail,*variants,*variants.prices,*categories,+metadata',
       },
-      { next: { tags: ['products'] } }
+      "products"
     )
 
   const product = result.products[0]
@@ -72,8 +70,7 @@ export const getProductsList = async function ({
       nextPage: null,
     }
   }
-  return sdk.store.product
-    .list(
+  return catalogFetch<any>("/store/products", 
       {
         limit,
         offset,
@@ -82,7 +79,7 @@ export const getProductsList = async function ({
           '*variants.calculated_price,+variants.inventory_quantity,*variants,*variants.prices',
         ...queryParams,
       },
-      { next: { tags: ['products'] } }
+      "products"
     )
     .then(({ products }) => {
       const filteredProducts = products.filter((product) => {
@@ -138,8 +135,7 @@ export const getProductsListByCollectionId = async function ({
     }
   }
 
-  return sdk.store.product
-    .list(
+  return catalogFetch<any>("/store/products", 
       {
         limit,
         offset,
@@ -148,7 +144,7 @@ export const getProductsListByCollectionId = async function ({
         fields:
           '*variants.calculated_price,+variants.inventory_quantity,*variants,*variants.prices',
       },
-      { next: { tags: ['products'] } }
+      "products"
     )
     .then(({ products, count }) => {
       if (excludeProductId) {
@@ -180,13 +176,13 @@ export const getStoreFilters = async function (countryCode?: string) {
   }
 
   // Fetch products for collection/type/material filters
-  const { products } = await sdk.store.product.list(
+  const { products } = await catalogFetch<any>("/store/products", 
     {
       limit: 1000,
       region_id: region.id,
       fields: '+collection,+type,+material',
     },
-    { next: { tags: ['products'] } }
+    "products"
   )
 
   // Fetch real product categories

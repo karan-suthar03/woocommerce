@@ -1,12 +1,11 @@
 import { cache } from 'react'
 
-import { sdk } from '@lib/config'
+import { catalogFetch } from './catalog-fetch'
 import medusaError from '@lib/util/medusa-error'
 import { HttpTypes } from '@medusajs/types'
 
 export const listRegions = cache(async function () {
-  return sdk.store.region
-    .list({}, { next: { tags: ['regions'] } })
+  return catalogFetch<any>("/store/regions", {}, "regions")
     .then(({ regions }) => {
       return regions
     })
@@ -16,8 +15,7 @@ export const listRegions = cache(async function () {
 })
 
 export const retrieveRegion = cache(async function (id: string) {
-  return sdk.store.region
-    .retrieve(id, {}, { next: { tags: ['regions'] } })
+  return catalogFetch<any>(`/store/regions/${id}`, {}, "regions")
     .then(({ region }) => region)
     .catch(medusaError)
 })
