@@ -63,7 +63,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 
     try {
       await transporter.sendMail({
-        from: `${process.env.SMTP_FROM_NAME || "Om Swami Enterprises"} <${smtpFromEmail}>`,
+        from: `${process.env.SMTP_FROM_NAME || "Swami Om Enterprises"} <${smtpFromEmail}>`,
         to: email,
         subject: emailContent.subject,
         html: emailContent.html,

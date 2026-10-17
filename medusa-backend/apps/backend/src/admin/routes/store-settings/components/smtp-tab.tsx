@@ -225,7 +225,7 @@ export const SmtpTab: React.FC<SmtpTabProps> = ({ settings, onSave, isSaving }) 
             className="w-full"
           />
           <Text className="text-xs text-ui-fg-subtle">
-            The name that will appear as the sender (e.g., "Om Swami Enterprises")
+            The name that will appear as the sender (e.g., "Swami Om Enterprises")
           </Text>
         </div>
 

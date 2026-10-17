@@ -177,7 +177,7 @@ function buildTotalsBlock(order: any): string {
 }
 
 // ── Customer confirmation email ───────────────────────────────────────────────
-function customerEmailHtml(order: any, logoUrl: string = "", brandName: string = "Om Swami Enterprises"): { subject: string; html: string; text: string } {
+function customerEmailHtml(order: any, logoUrl: string = "", brandName: string = "Swami Om Enterprises"): { subject: string; html: string; text: string } {
   const currency = order.currency_code ?? "inr"
   const payStatus = humanizePaymentStatus(
     order.payment_collections?.[0]?.status ?? order.payment_status
@@ -268,7 +268,7 @@ function customerEmailHtml(order: any, logoUrl: string = "", brandName: string =
           <p style="margin:0;font-size:12px;color:#999;">
             If you have any questions, reply to this email or contact us at <a href="mailto:${process.env.SMTP_FROM_EMAIL}" style="color:#555;">${process.env.SMTP_FROM_EMAIL}</a>.
           </p>
-          <p style="margin:8px 0 0;font-size:12px;color:#bbb;">© ${new Date().getFullYear()} Om Swami Enterprises. All rights reserved.</p>
+          <p style="margin:8px 0 0;font-size:12px;color:#bbb;">© ${new Date().getFullYear()} Swami Om Enterprises. All rights reserved.</p>
         </td></tr>
 
       </table>
@@ -279,7 +279,7 @@ function customerEmailHtml(order: any, logoUrl: string = "", brandName: string =
 
   const text = `
 ORDER CONFIRMED — #${order.display_id ?? order.id}
-Om Swami Enterprises
+Swami Om Enterprises
 
 Thank you, ${order.shipping_address?.first_name ?? ""}!
 
@@ -309,7 +309,7 @@ Questions? Contact us at ${process.env.SMTP_FROM_EMAIL}
 }
 
 // ── Admin notification email ──────────────────────────────────────────────────
-function adminEmailHtml(order: any, logoUrl: string = "", brandName: string = "Om Swami Enterprises"): { subject: string; html: string; text: string } {
+function adminEmailHtml(order: any, logoUrl: string = "", brandName: string = "Swami Om Enterprises"): { subject: string; html: string; text: string } {
   const currency = order.currency_code ?? "inr"
   const payStatus = humanizePaymentStatus(
     order.payment_collections?.[0]?.status ?? order.payment_status
@@ -408,7 +408,7 @@ function adminEmailHtml(order: any, logoUrl: string = "", brandName: string = "O
         </td></tr>
 
         <tr><td style="background:#f9f9f9;padding:16px 32px;text-align:center;border-top:1px solid #eee;">
-          <p style="margin:0;font-size:12px;color:#999;">This is an automated admin notification from Om Swami Enterprises.</p>
+          <p style="margin:0;font-size:12px;color:#999;">This is an automated admin notification from Swami Om Enterprises.</p>
         </td></tr>
 
       </table>
@@ -464,7 +464,7 @@ async function sendEmail({
   })
 
   const result = await transporter.sendMail({
-    from: `${process.env.SMTP_FROM_NAME ?? "Om Swami Enterprises"} <${process.env.SMTP_FROM_EMAIL}>`,
+    from: `${process.env.SMTP_FROM_NAME ?? "Swami Om Enterprises"} <${process.env.SMTP_FROM_EMAIL}>`,
     to,
     subject,
     html,
@@ -568,7 +568,7 @@ export default async function orderPlacedHandler({
 
     // ── 2. Fetch Store Branding (Logo & Name) ───────────────────────────
     let logoUrl = ""
-    let brandName = "Om Swami Enterprises"
+    let brandName = "Swami Om Enterprises"
     try {
       let storeSettingsService: StoreSettingsModuleService
       try {

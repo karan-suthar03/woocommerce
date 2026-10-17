@@ -6,7 +6,7 @@ export const generateOTPEmail = (
   expiryMinutes: number = 10
 ): { subject: string; html: string; text: string } => {
   return {
-    subject: "Verify Your Email - Om Swami Enterprises",
+    subject: "Verify Your Email - Swami Om Enterprises",
     html: `
       <!DOCTYPE html>
       <html lang="en">
@@ -100,7 +100,7 @@ export const generateOTPEmail = (
           </div>
           
           <div class="content">
-            <p>Welcome to <strong>Om Swami Enterprises</strong>!</p>
+            <p>Welcome to <strong>Swami Om Enterprises</strong>!</p>
             <p>To complete your registration, please verify your email address by entering the verification code below:</p>
             
             <div class="otp-box">${otp}</div>
@@ -113,19 +113,19 @@ export const generateOTPEmail = (
             
             <p>If you didn't request this verification code, please ignore this email. Your account will not be created without verification.</p>
             
-            <p style="margin-top: 30px;">Best regards,<br><strong>Om Swami Enterprises Team</strong></p>
+            <p style="margin-top: 30px;">Best regards,<br><strong>Swami Om Enterprises Team</strong></p>
           </div>
           
           <div class="footer">
             <p>This is an automated email, please do not reply directly to this message.</p>
-            <p>&copy; ${new Date().getFullYear()} Om Swami Enterprises. All rights reserved.</p>
+            <p>&copy; ${new Date().getFullYear()} Swami Om Enterprises. All rights reserved.</p>
           </div>
         </div>
       </body>
       </html>
     `,
     text: `
-Welcome to Om Swami Enterprises!
+Welcome to Swami Om Enterprises!
 
 To complete your registration, please verify your email address.
 
@@ -137,11 +137,11 @@ Do not share this code with anyone.
 If you didn't request this verification code, please ignore this email.
 
 Best regards,
-Om Swami Enterprises Team
+Swami Om Enterprises Team
 
 ---
 This is an automated email, please do not reply.
-© ${new Date().getFullYear()} Om Swami Enterprises. All rights reserved.
+© ${new Date().getFullYear()} Swami Om Enterprises. All rights reserved.
     `.trim(),
   }
 }

@@ -91,7 +91,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         <!-- Header -->
         <tr><td style="background:#1a1a1a;padding:28px 32px;text-align:center;">
           <p style="color:#f59e0b;margin:0 0 4px;font-size:12px;font-weight:bold;letter-spacing:1px;">॥ श्री स्वामी समर्थ ॥</p>
-          <h1 style="color:#ffffff;margin:0;font-size:22px;letter-spacing:1px;">Om Swami Enterprises</h1>
+          <h1 style="color:#ffffff;margin:0;font-size:22px;letter-spacing:1px;">Swami Om Enterprises</h1>
         </td></tr>
 
         <!-- Body Content -->
@@ -122,7 +122,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         <!-- Footer -->
         <tr><td style="background:#f9fafb;padding:20px 32px;text-align:center;border-top:1px solid #f3f4f6;">
           <p style="margin:0;font-size:12px;color:#9ca3af;">
-            Om Swami Enterprises • Shri Swami Samarth Annachhatra Mandal Premises, Akkalkot
+            Swami Om Enterprises • Shri Swami Samarth Annachhatra Mandal Premises, Akkalkot
           </p>
         </td></tr>
 
@@ -134,7 +134,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 `
 
     const text = `
-PASSWORD RESET REQUEST — Om Swami Enterprises
+PASSWORD RESET REQUEST — Swami Om Enterprises
 
 Hello ${customerName},
 
@@ -148,9 +148,9 @@ Link valid for 1 hour.
 `.trim()
 
     await transporter.sendMail({
-      from: `${process.env.SMTP_FROM_NAME ?? "Om Swami Enterprises"} <${process.env.SMTP_FROM_EMAIL}>`,
+      from: `${process.env.SMTP_FROM_NAME ?? "Swami Om Enterprises"} <${process.env.SMTP_FROM_EMAIL}>`,
       to: email,
-      subject: `🔑 Password Reset Request — Om Swami Enterprises`,
+      subject: `🔑 Password Reset Request — Swami Om Enterprises`,
       html,
       text,
     })

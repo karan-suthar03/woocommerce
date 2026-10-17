@@ -1,0 +1,34 @@
+# Part 1 – Fix log (Swami Om Enterprises)
+
+Running log of every issue found while auditing the site, with root cause and fix.
+Status: **Fixed** (code changed), **Deployed** (live server updated), **Open** (needs work or a decision).
+
+| # | Area | Issue | Root cause | Fix | Status |
+|---|------|-------|------------|-----|--------|
+| 1 | Payments (live) | Live checkout could not take any payment: "An unexpected response was received from the server", no Pay button | Live Razorpay key `rzp_live_TYjI…` rejected by Razorpay (`401 Authentication failed`) since at least 28 Sep; plugin error handling hid it as `Failed to create Razorpay order: undefined` | Added fresh **test** keys + webhook secret to server backend env (`RAZORPAY_TEST_*`, live lines kept), set storefront public key, rebuilt storefront, restarted both. Live now runs in Razorpay **test mode** | Deployed (temporary – needs valid live keys) |
+| 2 | Payments (live) | Paid orders stay **Authorized** in admin, never **Captured** (order #17) | Server's `node_modules` had the unpatched plugin: `patch-package` never re-ran after the patch was updated, so `capturePayment` crashed on every `payment.captured` webhook (`Cannot read properties of undefined (reading 'toUpperCase')`) | Reversed old patch, applied current patch (`aefe591…`) on server, restarted backend. Order #17 itself still needs a manual **Capture** in admin | Deployed |
+| 3 | Payments | Webhook secret empty on live, so webhook signatures were never verified | `RAZORPAY_WEBHOOK_SECRET` blank in server env | Test-mode webhook created in Razorpay; secret set as `RAZORPAY_TEST_WEBHOOK_SECRET` on server. Live-mode webhook still to create | Deployed (test mode) |
+| 4 | Payments (security) | Webhooks with an invalid signature are still processed | Patched `getWebhookActionAndData` only logs a warning on signature failure | Reject invalid signatures | Open |
+| 5 | Payments | Plugin hides Razorpay's real error (`…: undefined`) | Error handler reads `error.message`; Razorpay SDK puts it in `error.error.description` | Log/return `error.error.description` | Open |
+| 6 | Payments / config | Test keys silently win over live keys (`RAZORPAY_TEST_* ?? RAZORPAY_*`) while the storefront prefers the live key – a mismatch breaks checkout | Fallback order in `medusa-config.ts`, verify route and storefront | Select keys from one explicit `RAZORPAY_MODE` | Open |
+| 7 | Checkout | Customers with an expired login could never reach checkout (page reloaded ~14×/s) | `proxy.ts` redirected `/account?redirectTo=…` back to checkout on cookie *presence*; checkout got 401 and redirected to `/account` → infinite loop | Removed the cookie-only redirect; the account layout already redirects after validating the session | Fixed (local, not deployed) |
+| 8 | Checkout | Checkout renders blank when the cart cookie belongs to another customer (switching accounts on one browser) | `retrieveCart` returns `null` and the page renders nothing | Show a message / create a fresh cart | Open |
+| 9 | Auth (security) | Sign-up email OTP can be bypassed | OTP is only checked in the browser; `/store/customers` accepts registrations directly | Enforce OTP server-side | Open |
+| 10 | Emails | Brand shown as "Om Swami Enterprises" in all emails; site uses "Swami Om Enterprises" | Hard-coded in 7 backend files | Replaced in order, OTP, forgot-password, SMTP test and notification templates | Fixed (local, not deployed) |
+| 11 | Emails | Order email subject/header says "Solace E-Commerce Store" | Store setting `store.brand_name` still holds the starter template name | Change in **Admin → Store Settings → General** | Open (data change on live) |
+| 12 | Images / data | Some images point to `http://localhost:9000/static/…` on the live site (Test product + 5 old order lines) | Local dev uses the **live database**, so uploads from a local admin save localhost URLs into live data | Give local dev its own database (also stops test orders landing in live data); repoint the stray URLs | Open |
+| 13 | Infra / security | Live DB password, server root password and Razorpay secrets shared in chat; Postgres port 5432 open to the internet | – | Rotate passwords/keys; firewall 5432 to localhost | Open (owner decision) |
+| 14 | Performance (local only) | Local add-to-cart 20–28 s | Local backend talks to the remote live DB (~150 ms per query × 100+ queries). Live itself is fine (API 0.3–0.8 s, pages ~1.3 s) | Local database (see #12) | Open |
+
+## Verified working
+- Admin image upload → stored on server, served publicly, shown on the product and on the order (order #18, customer order page).
+- Order confirmation + admin new-order emails render and send via live SMTP (test sent to the owner's inbox).
+- Local checkout (mock Razorpay, both webhook orderings) creates exactly one order; no duplicate on webhook + callback race.
+
+## Server changes made (with owner approval) and how to revert
+- `medusa-backend/apps/backend/.medusa/server/.env`: appended `RAZORPAY_TEST_*` block → delete it to return to live keys. Backup: `.env.pre-testkeys-20261017-100333`.
+- `solace-medusa-starter/.env.production`: public key → test key. Backup: `.env.production.pre-testkeys-20261017-100333` (rebuild storefront after restoring).
+- Razorpay plugin patch: backups `/root/rzp-patch.bak-20261017-102242`, `/root/razorpay-base.js.bak-20261017-102242`.
+
+## Live test data created during the audit
+Customer `claude.test+checkout@example.com`; orders #17 (test payment), #18 (admin draft order); Test product image changed (original saved); several abandoned carts.

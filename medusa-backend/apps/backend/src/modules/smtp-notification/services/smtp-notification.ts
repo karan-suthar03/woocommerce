@@ -116,7 +116,7 @@ class SmtpNotificationService extends AbstractNotificationProviderService {
       const mailOptions = {
         from: `${config.from.name} <${config.from.email}>`,
         to: notification.to,
-        subject: notification.subject || "Notification from Om Swami Enterprises",
+        subject: notification.subject || "Notification from Swami Om Enterprises",
         html: notification.body || this.formatNotificationData(notification.data),
         text: notification.body || JSON.stringify(notification.data),
       }
@@ -145,7 +145,7 @@ class SmtpNotificationService extends AbstractNotificationProviderService {
     if (data.order) {
       html += `<h2 style='color: #333;'>Order Confirmation</h2>`
       html += `<p>Order ID: <strong>${data.order.id || data.order_id}</strong></p>`
-      html += `<p>Thank you for your order from Om Swami Enterprises!</p>`
+      html += `<p>Thank you for your order from Swami Om Enterprises!</p>`
       html += `<p style='color: #666; font-size: 12px; margin-top: 30px;'>If you have any questions, please contact us.</p>`
     } else {
       html += `<pre style='background: #f5f5f5; padding: 15px; border-radius: 5px;'>${JSON.stringify(data, null, 2)}</pre>`

@@ -185,24 +185,10 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // 2.1 Authenticated Account Redirect Guard
-  const isAccountRoute =
-    /^\/([a-z]{2}\/)?account(\/|$|\?)/.test(request.nextUrl.pathname) ||
-    request.nextUrl.pathname.endsWith('/account')
-
-  if (isAccountRoute) {
-    const authToken = request.cookies.get('_medusa_jwt')?.value
-    const redirectToParam = searchParams.get('redirectTo')
-
-    if (authToken && redirectToParam) {
-      const cleanRedirectTo = decodeURIComponent(redirectToParam)
-      const targetPath = cleanRedirectTo.startsWith('/')
-        ? cleanRedirectTo
-        : `/${cleanRedirectTo}`
-      const redirectUrl = new URL(targetPath, request.nextUrl.origin)
-      return NextResponse.redirect(redirectUrl, 307)
-    }
-  }
+  // 2.1 /account?redirectTo=… is resolved by the account layout, which checks
+  // the session with the backend. Redirecting here on cookie presence alone
+  // loops forever with an expired JWT: checkout gets a 401 and sends the
+  // customer to /account, and a cookie-only check here sends them straight back.
 
   // 3. Handle non-default country code in URL (e.g. /us/shop)
   if (urlHasCountryCode && firstSegment !== defaultRegion) {
