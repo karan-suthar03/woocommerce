@@ -1,5 +1,5 @@
 diff --git a/node_modules/medusa-plugin-razorpay-v2/.medusa/server/src/providers/payment-razorpay/src/core/razorpay-base.js b/node_modules/medusa-plugin-razorpay-v2/.medusa/server/src/providers/payment-razorpay/src/core/razorpay-base.js
-index 3657949..95bfb4a 100644
+index 3657949..32c045c 100644
 --- a/node_modules/medusa-plugin-razorpay-v2/.medusa/server/src/providers/payment-razorpay/src/core/razorpay-base.js
 +++ b/node_modules/medusa-plugin-razorpay-v2/.medusa/server/src/providers/payment-razorpay/src/core/razorpay-base.js
 @@ -22,17 +22,19 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
@@ -38,8 +38,10 @@ index 3657949..95bfb4a 100644
          if (!(0, utils_1.isDefined)(options.automatic_expiry_period)) {
              if (!(0, utils_1.isDefined)(options.manual_expiry_period)) {
                  throw new utils_1.MedusaError(utils_1.MedusaErrorTypes.INVALID_ARGUMENT, "Required option `manual_expiry_period` is missing in Razorpay plugin");
-@@ -57,23 +57,75 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
--    async capturePayment(input) {
+@@ -56,39 +55,92 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
+         }
+     }
+     async capturePayment(input) {
 -        const { razorpayOrder, paymentSession } = await this.getPaymentSessionAndOrderFromInput(input);
 -        const paymentsResponse = await this.razorpay_.orders.fetchPayments(razorpayOrder.id);
 -        const possibleCaptures = paymentsResponse.items?.filter((item) => item.status === "authorized");
@@ -54,15 +56,6 @@ index 3657949..95bfb4a 100644
 -            const returrnedResult = {
 -                data: {
 -                    razorpayOrder: syncResult.razorpayOrder
--                }
--            };
--            return returrnedResult;
--        }
--        else {
--            throw new utils_1.MedusaError(utils_1.MedusaError.Types.NOT_FOUND, `No payments found for order ${razorpayOrder.id}`);
--        }
--    }
-+    async capturePayment(input) {
 +        this.logger.info(`[Razorpay Provider] capturePayment invoked with input: ${JSON.stringify(input)}`);
 +        let razorpayOrder = input?.data?.razorpayOrder;
 +        if (!razorpayOrder) {
@@ -72,16 +65,20 @@ index 3657949..95bfb4a 100644
 +                    razorpayOrder = await this.razorpay_.orders.fetch(orderId);
 +                } catch (e) {
 +                    this.logger.warn(`[Razorpay Provider] capturePayment: could not fetch order ${orderId}: ${e?.message}`);
-+                }
+                 }
+-            };
+-            return returrnedResult;
 +            }
-+        }
+         }
+-        else {
+-            throw new utils_1.MedusaError(utils_1.MedusaError.Types.NOT_FOUND, `No payments found for order ${razorpayOrder.id}`);
 +
 +        if (!razorpayOrder?.id) {
 +            throw new utils_1.MedusaError(
 +                utils_1.MedusaError.Types.INVALID_DATA,
 +                "No Razorpay order found in payment data to capture"
 +            );
-+        }
+         }
 +
 +        const razorpayOrderId = razorpayOrder.id;
 +        let latestOrder = razorpayOrder;
@@ -135,7 +132,7 @@ index 3657949..95bfb4a 100644
 +                razorpayPayment: result
 +            }
 +        };
-+    }
+     }
      async authorizePayment(input) {
 +        this.logger.info(`[Razorpay Provider] authorizePayment invoked with input: ${JSON.stringify(input)}`);
          const { razorpayOrder, paymentSession } = await this.getPaymentSessionAndOrderFromInput(input);
@@ -156,7 +153,7 @@ index 3657949..95bfb4a 100644
          return {
              data: {
                  razorpayOrder: result.razorpayOrder
-@@ -152,10 +153,11 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
+@@ -152,10 +204,11 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
              razorpayOrder: razorpayOrder
          };
      }
@@ -169,7 +166,7 @@ index 3657949..95bfb4a 100644
              payment: {
                  capture: (this.options_.auto_capture ?? true)
                      ? "automatic"
-@@ -180,25 +182,39 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
+@@ -180,25 +233,39 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
          };
      }
      getToPay(amount, currency_code) {
@@ -213,7 +210,7 @@ index 3657949..95bfb4a 100644
              throw new utils_1.MedusaError(utils_1.MedusaError.Types.INVALID_DATA, `Failed to create Razorpay order: ${error.message}`);
          }
      }
-@@ -299,7 +315,7 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
+@@ -299,7 +366,7 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
              return utils_1.PaymentSessionStatus.ERROR;
          }
          else {
@@ -222,7 +219,7 @@ index 3657949..95bfb4a 100644
              const totalAuthorised = authorisedAttempts.reduce((p, c) => {
                  const data = p + parseInt(`${c.amount}`, 10);
                  return data;
-@@ -310,57 +326,63 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
+@@ -310,57 +377,62 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
          }
      }
      async refundPayment(input) {
@@ -322,7 +319,7 @@ index 3657949..95bfb4a 100644
                  ?.medusa_payment_session_id ??
                  input?.context?.idempotency_key
          });
-@@ -369,40 +391,108 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
+@@ -369,40 +441,108 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
          };
      }
      async getWebhookActionAndData(webhookData) {
@@ -455,7 +452,7 @@ index 3657949..95bfb4a 100644
                          amount: outstanding
                      }
                  };
-@@ -410,7 +500,7 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
+@@ -410,7 +550,7 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
                  return {
                      action: utils_1.PaymentActions.AUTHORIZED,
                      data: {
@@ -464,7 +461,7 @@ index 3657949..95bfb4a 100644
                          amount: outstanding
                      }
                  };
-@@ -418,11 +508,12 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
+@@ -418,11 +558,12 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
                  return {
                      action: utils_1.PaymentActions.FAILED,
                      data: {
