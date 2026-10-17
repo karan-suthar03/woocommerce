@@ -1,5 +1,5 @@
 diff --git a/node_modules/medusa-plugin-razorpay-v2/.medusa/server/src/providers/payment-razorpay/src/core/razorpay-base.js b/node_modules/medusa-plugin-razorpay-v2/.medusa/server/src/providers/payment-razorpay/src/core/razorpay-base.js
-index 3657949..f7bfce7 100644
+index 3657949..421be76 100644
 --- a/node_modules/medusa-plugin-razorpay-v2/.medusa/server/src/providers/payment-razorpay/src/core/razorpay-base.js
 +++ b/node_modules/medusa-plugin-razorpay-v2/.medusa/server/src/providers/payment-razorpay/src/core/razorpay-base.js
 @@ -7,6 +7,8 @@ const utils_1 = require("@medusajs/framework/utils");
@@ -230,7 +230,7 @@ index 3657949..f7bfce7 100644
              const totalAuthorised = authorisedAttempts.reduce((p, c) => {
                  const data = p + parseInt(`${c.amount}`, 10);
                  return data;
-@@ -310,57 +379,62 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
+@@ -310,57 +379,65 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
          }
      }
      async refundPayment(input) {
@@ -264,7 +264,10 @@ index 3657949..f7bfce7 100644
 -                throw new utils_1.MedusaError(utils_1.MedusaError.Types.INVALID_DATA, `Failed to create Razorpay refund: ${e.message}`);
 -            }
 +        const { paymentSession, razorpayOrder } = await this.getPaymentSessionAndOrderFromInput(input);
-+        const { amount, currency_code } = input;
++        // Medusa passes only { amount, data } to refundPayment, so the currency
++        // has to come from the Razorpay order itself.
++        const { amount } = input;
++        const currency_code = input.currency_code ?? razorpayOrder?.currency ?? input.data?.razorpayOrder?.currency ?? "INR";
 +        const toRefund = this.getToPay(amount, currency_code);
 +        let payments;
 +        try {
@@ -330,7 +333,7 @@ index 3657949..f7bfce7 100644
                  ?.medusa_payment_session_id ??
                  input?.context?.idempotency_key
          });
-@@ -369,40 +443,112 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
+@@ -369,40 +446,112 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
          };
      }
      async getWebhookActionAndData(webhookData) {
@@ -467,7 +470,7 @@ index 3657949..f7bfce7 100644
                          amount: outstanding
                      }
                  };
-@@ -410,7 +556,7 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
+@@ -410,7 +559,7 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
                  return {
                      action: utils_1.PaymentActions.AUTHORIZED,
                      data: {
@@ -476,7 +479,7 @@ index 3657949..f7bfce7 100644
                          amount: outstanding
                      }
                  };
-@@ -418,11 +564,12 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
+@@ -418,11 +567,12 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
                  return {
                      action: utils_1.PaymentActions.FAILED,
                      data: {

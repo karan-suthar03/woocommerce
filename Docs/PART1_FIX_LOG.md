@@ -19,8 +19,13 @@ Status: **Fixed** (code changed), **Deployed** (live server updated), **Open** (
 | 12 | Images / data | Some images point to `http://localhost:9000/static/…` on the live site (Test product + 5 old order lines) | Local dev uses the **live database**, so uploads from a local admin save localhost URLs into live data | Give local dev its own database (also stops test orders landing in live data); repoint the stray URLs | Open |
 | 13 | Infra / security | Live DB password, server root password and Razorpay secrets shared in chat; Postgres port 5432 open to the internet | – | Rotate passwords/keys; firewall 5432 to localhost | Open (owner decision) |
 | 14 | Performance (local only) | Local add-to-cart 20–28 s | Local backend talks to the remote live DB (~150 ms per query × 100+ queries). Live itself is fine (API 0.3–0.8 s, pages ~1.3 s) | Local database (see #12) | Open |
+| 15 | Refunds | Every admin refund failed with "An unknown error occurred" | Patched `refundPayment` read `input.currency_code`, which Medusa never passes → `getToPay` crashed on `undefined.toUpperCase()` | Currency now taken from the Razorpay order (fallback INR). Verified: ₹100 partial refund on #17 → Razorpay `refund_status=partial`, order `partially_refunded` | Fixed (local, not deployed) |
+| 16 | Customer dashboard | After a refund the order page silently showed a lower "Total Amount" (₹204 instead of ₹304) with no mention of the refund | Medusa books refunds as a credit line, which reduces `order.total` | Order summary shows Total paid, "Refunded −₹X" and "Net Paid" when a refund exists | Fixed (local, not deployed) |
+| 17 | Refunds | Refund status changes from Razorpay (`refund.processed` / `refund.failed`) are ignored | Plugin webhook handler only maps payment/order events | Handle refund events (needed mainly for slow or failed bank refunds in live mode) | Open |
 
 ## Verified working
+- Admin **capture** (order #17) now works with the deployed patch: payment `authorized` → `captured`.
+- Admin **partial refund** works end-to-end with fix #15 (Razorpay shows ₹100 refunded).
 - Admin image upload → stored on server, served publicly, shown on the product and on the order (order #18, customer order page).
 - Order confirmation + admin new-order emails render and send via live SMTP (test sent to the owner's inbox).
 - Local checkout (mock Razorpay, both webhook orderings) creates exactly one order; no duplicate on webhook + callback race.

@@ -20,6 +20,14 @@ const OrderSummary = ({ order }: OrderSummaryProps) => {
     })
   }
 
+  const sumCollections = (key: 'captured_amount' | 'refunded_amount') =>
+    (order.payment_collections ?? []).reduce(
+      (sum, pc) => sum + Number((pc as any)[key] ?? 0),
+      0
+    )
+  const paidAmount = sumCollections('captured_amount')
+  const refundedAmount = sumCollections('refunded_amount')
+
   return (
     <Box className="bg-primary border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 sm:p-5 shadow-xs flex flex-col gap-3.5">
       <h3 className="font-bold text-sm sm:text-base text-neutral-900 dark:text-white pb-3 border-b border-neutral-100 dark:border-neutral-800/60">
@@ -66,9 +74,26 @@ const OrderSummary = ({ order }: OrderSummaryProps) => {
       <Box className="pt-3 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
         <span className="font-bold text-sm sm:text-base text-neutral-900 dark:text-white">Total Amount</span>
         <span className="font-bold text-base sm:text-lg text-neutral-900 dark:text-white font-mono">
-          {getAmount(order.total)}
+          {/* A refund is booked as a credit, which lowers order.total; show what was paid instead. */}
+          {getAmount(refundedAmount > 0 ? paidAmount : order.total)}
         </span>
       </Box>
+      {refundedAmount > 0 && (
+        <>
+          <Box className="flex items-center justify-between text-neutral-600 dark:text-neutral-400 text-xs sm:text-sm">
+            <span>Refunded</span>
+            <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono" data-testid="order-refunded-amount">
+              - {getAmount(refundedAmount)}
+            </span>
+          </Box>
+          <Box className="flex items-center justify-between text-xs sm:text-sm">
+            <span className="font-semibold text-neutral-900 dark:text-white">Net Paid</span>
+            <span className="font-bold text-neutral-900 dark:text-white font-mono">
+              {getAmount(paidAmount - refundedAmount)}
+            </span>
+          </Box>
+        </>
+      )}
       <div className="pt-1">
         <Button variant="tonal" size="sm" asChild className="w-full text-xs sm:text-sm h-8 sm:h-9">
           <LocalizedClientLink href={`/account/orders/invoice/${order.id}`}>
