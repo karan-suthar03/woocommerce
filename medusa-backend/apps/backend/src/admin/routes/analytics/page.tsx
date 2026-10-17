@@ -6,6 +6,7 @@ import { SalesChart } from "./components/sales-chart"
 import { TopProductsTable } from "./components/top-products-table"
 import { LowStockTable } from "./components/low-stock-table"
 import { RecentOrdersTable } from "./components/recent-orders-table"
+import { StoreInsights } from "./components/store-insights"
 import { DateRangePicker, DateRangePreset } from "./components/date-range-picker"
 
 // Custom Chart/Analytics Icon for Medusa Admin Sidebar
@@ -161,6 +162,8 @@ const AnalyticsDashboardPage = () => {
 
       {/* Live Recent Orders Feed */}
       <RecentOrdersTable orders={recentOrders} isLoading={isLoading} />
+
+      <StoreInsights {...getDateRange(preset)} refreshKey={preset} />
     </div>
   )
 }
