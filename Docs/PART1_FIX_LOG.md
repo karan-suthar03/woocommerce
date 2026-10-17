@@ -28,8 +28,10 @@ Status: **Fixed** (code changed), **Deployed** (live server updated), **Open** (
 | 21 | Auth | Forgot-password also fired Medusa's own reset flow in the background, whose token/event nothing used | Leftover fetch to `localhost/auth/customer/emailpass/reset-password` | Removed | Fixed (local, not deployed) |
 | 22 | Branding | Support email on the live site is `support@solace-store.com` (starter-template placeholder), served to the storefront by `/store-info` | Setting `store.support_email` never changed from the template | Owner to confirm the real support address, then set it in Admin → Store Settings → General | Open (owner decision) |
 | 23 | Payments | Every Razorpay webhook was processed twice (double Razorpay API calls, duplicated log lines) | Debug subscriber `payment-webhook-logger.ts` re-ran `getWebhookActionAndData` on each event just to log it | Removed the debug subscriber; the plugin already logs each event once | Fixed (local, not deployed) |
+| 24 | Payments + stock | **Paid but no order, no refund** (the brief's main bug): if an item sells out between "Pay" and order creation, Razorpay has already auto-captured the money, cart completion fails with "Not enough stock", the customer sees an error, and nothing refunds them | Stock is only checked when the order is created, after capture; Medusa never authorised the payment, so its rollback has nothing to refund | Proposed: (1) re-check stock right before opening the Razorpay popup; (2) backend safety net — a job that finds Razorpay-paid carts with no order after ~10 min and refunds them automatically (also covers closed-browser cases) | Open (reproduced) |
 
 ## Verified working
+- Overselling prevented: two simultaneous checkouts for the last unit → one order (#19, cancelled afterwards), one refused "Not enough stock". Live stock restored to 97 afterwards.
 - Password reset (live): link sets the new password, login works with it, expired link rejected.
 - Admin **capture** (order #17) now works with the deployed patch: payment `authorized` → `captured`.
 - Admin **partial refund** works end-to-end with fix #15 (Razorpay shows ₹100 refunded).
