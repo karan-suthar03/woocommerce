@@ -35,6 +35,34 @@ if (nodeEnv === "production") {
   }
 }
 
+// RAZORPAY_MODE picks the key set explicitly ("live" or "test", default
+// "test"), so leftover RAZORPAY_TEST_* values can never silently override
+// live keys. The storefront's NEXT_PUBLIC_RAZORPAY_KEY_ID must be the same mode.
+const razorpayLive = process.env.RAZORPAY_MODE === "live"
+const razorpay = razorpayLive
+  ? {
+      key_id: process.env.RAZORPAY_ID,
+      key_secret: process.env.RAZORPAY_SECRET,
+      account: process.env.RAZORPAY_ACCOUNT || undefined,
+      automatic_expiry_period: process.env.RAZORPAY_AUTO_EXPIRY_PERIOD,
+      manual_expiry_period: process.env.RAZORPAY_MANUAL_EXPIRY_PERIOD,
+      webhook_secret: process.env.RAZORPAY_WEBHOOK_SECRET || undefined,
+    }
+  : {
+      key_id: process.env.RAZORPAY_TEST_KEY_ID,
+      key_secret: process.env.RAZORPAY_TEST_KEY_SECRET,
+      account: process.env.RAZORPAY_TEST_ACCOUNT || undefined,
+      automatic_expiry_period: process.env.RAZORPAY_TEST_AUTO_EXPIRY_PERIOD,
+      manual_expiry_period: process.env.RAZORPAY_TEST_MANUAL_EXPIRY_PERIOD,
+      webhook_secret: process.env.RAZORPAY_TEST_WEBHOOK_SECRET || undefined,
+    }
+
+if (razorpay.key_id && !razorpay.key_id.startsWith(razorpayLive ? "rzp_live_" : "rzp_test_")) {
+  throw new Error(
+    `RAZORPAY_MODE is "${razorpayLive ? "live" : "test"}" but the configured key is ${razorpay.key_id.slice(0, 9)}… — keys and mode must match.`
+  )
+}
+
 const isRedisConfigured = Boolean(
   process.env.REDIS_URL && process.env.REDIS_URL.trim() !== ""
 )
@@ -127,23 +155,12 @@ module.exports = defineConfig({
               "medusa-plugin-razorpay-v2/providers/payment-razorpay/src",
             id: "razorpay",
             options: {
-              key_id:
-                process.env.RAZORPAY_TEST_KEY_ID ?? process.env.RAZORPAY_ID,
-              key_secret:
-                process.env.RAZORPAY_TEST_KEY_SECRET ??
-                process.env.RAZORPAY_SECRET,
-              razorpay_account:
-                process.env.RAZORPAY_TEST_ACCOUNT || process.env.RAZORPAY_ACCOUNT || undefined,
-              automatic_expiry_period:
-                process.env.RAZORPAY_TEST_AUTO_EXPIRY_PERIOD ??
-                process.env.RAZORPAY_AUTO_EXPIRY_PERIOD ?? 30,
-              manual_expiry_period:
-                process.env.RAZORPAY_TEST_MANUAL_EXPIRY_PERIOD ??
-                process.env.RAZORPAY_MANUAL_EXPIRY_PERIOD ?? 7200,
-              webhook_secret:
-                process.env.RAZORPAY_TEST_WEBHOOK_SECRET ??
-                process.env.RAZORPAY_WEBHOOK_SECRET ??
-                "local_dev_webhook_secret",
+              key_id: razorpay.key_id,
+              key_secret: razorpay.key_secret,
+              razorpay_account: razorpay.account,
+              automatic_expiry_period: razorpay.automatic_expiry_period ?? 30,
+              manual_expiry_period: razorpay.manual_expiry_period ?? 7200,
+              webhook_secret: razorpay.webhook_secret,
               auto_capture: true,
             },
           },

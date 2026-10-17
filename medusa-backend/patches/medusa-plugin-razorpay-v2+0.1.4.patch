@@ -1,8 +1,17 @@
 diff --git a/node_modules/medusa-plugin-razorpay-v2/.medusa/server/src/providers/payment-razorpay/src/core/razorpay-base.js b/node_modules/medusa-plugin-razorpay-v2/.medusa/server/src/providers/payment-razorpay/src/core/razorpay-base.js
-index 3657949..32c045c 100644
+index 3657949..f7bfce7 100644
 --- a/node_modules/medusa-plugin-razorpay-v2/.medusa/server/src/providers/payment-razorpay/src/core/razorpay-base.js
 +++ b/node_modules/medusa-plugin-razorpay-v2/.medusa/server/src/providers/payment-razorpay/src/core/razorpay-base.js
-@@ -22,17 +22,19 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
+@@ -7,6 +7,8 @@ const utils_1 = require("@medusajs/framework/utils");
+ const razorpay_1 = __importDefault(require("razorpay"));
+ const get_smallest_unit_1 = require("../utils/get-smallest-unit");
+ const update_razorpay_customer_metadata_1 = require("../workflows/update-razorpay-customer-metadata");
++// The Razorpay SDK rejects with { statusCode, error: { code, description } }, which has no .message.
++const rzpErrorMessage = (e) => e?.error?.description ?? e?.message ?? JSON.stringify(e);
+ class RazorpayBase extends utils_1.AbstractPaymentProvider {
+     constructor(container, options) {
+         super(container, options);
+@@ -22,17 +24,19 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
          if (!provider && !this.options_.key_id) {
              throw new utils_1.MedusaError(utils_1.MedusaErrorTypes.INVALID_ARGUMENT, "razorpay not configured", utils_1.MedusaErrorCodes.CART_INCOMPATIBLE_STATE);
          }
@@ -28,7 +37,7 @@ index 3657949..32c045c 100644
                  });
      }
      static validateOptions(options) {
-@@ -42,9 +44,6 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
+@@ -42,9 +46,6 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
          if (!(0, utils_1.isDefined)(options.key_secret)) {
              throw new utils_1.MedusaError(utils_1.MedusaErrorTypes.INVALID_ARGUMENT, "Required option `key_secret` is missing in Razorpay plugin");
          }
@@ -38,7 +47,7 @@ index 3657949..32c045c 100644
          if (!(0, utils_1.isDefined)(options.automatic_expiry_period)) {
              if (!(0, utils_1.isDefined)(options.manual_expiry_period)) {
                  throw new utils_1.MedusaError(utils_1.MedusaErrorTypes.INVALID_ARGUMENT, "Required option `manual_expiry_period` is missing in Razorpay plugin");
-@@ -56,39 +55,92 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
+@@ -56,39 +57,92 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
          }
      }
      async capturePayment(input) {
@@ -94,7 +103,7 @@ index 3657949..32c045c 100644
 +        } catch (error) {
 +            throw new utils_1.MedusaError(
 +                utils_1.MedusaError.Types.INVALID_DATA,
-+                `Failed to retrieve payments for Razorpay order ${razorpayOrderId}: ${error.message}`
++                `Failed to retrieve payments for Razorpay order ${razorpayOrderId}: ${rzpErrorMessage(error)}`
 +            );
 +        }
 +
@@ -153,7 +162,7 @@ index 3657949..32c045c 100644
          return {
              data: {
                  razorpayOrder: result.razorpayOrder
-@@ -152,10 +204,11 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
+@@ -152,10 +206,11 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
              razorpayOrder: razorpayOrder
          };
      }
@@ -166,7 +175,7 @@ index 3657949..32c045c 100644
              payment: {
                  capture: (this.options_.auto_capture ?? true)
                      ? "automatic"
-@@ -180,25 +233,39 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
+@@ -180,26 +235,40 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
          };
      }
      getToPay(amount, currency_code) {
@@ -206,11 +215,13 @@ index 3657949..32c045c 100644
          }
          catch (error) {
 -            this.logger.error(`Error creating Razorpay order: ${error.message}`, error);
-+            this.logger.error(`[Razorpay Backend] Error creating Razorpay order: ${error.message}`, error);
-             throw new utils_1.MedusaError(utils_1.MedusaError.Types.INVALID_DATA, `Failed to create Razorpay order: ${error.message}`);
+-            throw new utils_1.MedusaError(utils_1.MedusaError.Types.INVALID_DATA, `Failed to create Razorpay order: ${error.message}`);
++            this.logger.error(`[Razorpay Backend] Error creating Razorpay order: ${rzpErrorMessage(error)}`, error);
++            throw new utils_1.MedusaError(utils_1.MedusaError.Types.INVALID_DATA, `Failed to create Razorpay order: ${rzpErrorMessage(error)}`);
          }
      }
-@@ -299,7 +366,7 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
+     async updateRazorpayOrderMetadata(orderId, metadata) {
+@@ -299,7 +368,7 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
              return utils_1.PaymentSessionStatus.ERROR;
          }
          else {
@@ -219,7 +230,7 @@ index 3657949..32c045c 100644
              const totalAuthorised = authorisedAttempts.reduce((p, c) => {
                  const data = p + parseInt(`${c.amount}`, 10);
                  return data;
-@@ -310,57 +377,62 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
+@@ -310,57 +379,62 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
          }
      }
      async refundPayment(input) {
@@ -261,7 +272,7 @@ index 3657949..32c045c 100644
          }
 -        else {
 +        catch (error) {
-+            throw new utils_1.MedusaError(utils_1.MedusaError.Types.INVALID_DATA, `Failed to retrieve payments for Razorpay order ${razorpayOrder.id}: ${error.message}`);
++            throw new utils_1.MedusaError(utils_1.MedusaError.Types.INVALID_DATA, `Failed to retrieve payments for Razorpay order ${razorpayOrder.id}: ${rzpErrorMessage(error)}`);
 +        }
 +        const capturedPayments = payments.items?.filter((item) => item.status === "captured");
 +        if (!capturedPayments || capturedPayments.length === 0) {
@@ -286,7 +297,7 @@ index 3657949..32c045c 100644
              };
          }
 +        catch (error) {
-+            throw new utils_1.MedusaError(utils_1.MedusaError.Types.INVALID_DATA, `Failed to process refund with Razorpay: ${error.message}`);
++            throw new utils_1.MedusaError(utils_1.MedusaError.Types.INVALID_DATA, `Failed to process refund with Razorpay: ${rzpErrorMessage(error)}`);
 +        }
      }
      async retrievePayment(input) {
@@ -319,7 +330,7 @@ index 3657949..32c045c 100644
                  ?.medusa_payment_session_id ??
                  input?.context?.idempotency_key
          });
-@@ -369,40 +441,108 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
+@@ -369,40 +443,112 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
          };
      }
      async getWebhookActionAndData(webhookData) {
@@ -341,9 +352,6 @@ index 3657949..32c045c 100644
 -        const logger = this.logger;
 -        const data = webhookData.data;
 -        logger.info(`Received Razorpay webhook body as object : ${JSON.stringify(webhookData.data)}`);
--        try {
--            if (!webhookSignature || !webhookSecret) {
--                return { action: utils_1.PaymentActions.FAILED };
 +
 +        let rawPayload = webhookData?.rawData;
 +        if (Buffer.isBuffer(rawPayload)) {
@@ -358,24 +366,31 @@ index 3657949..32c045c 100644
 +            rawPayload = "";
 +        }
 +
-+        if (webhookSignature && webhookSecret && rawPayload) {
-+            try {
-+                const isValid = razorpay_1.default.validateWebhookSignature(rawPayload, webhookSignature, webhookSecret);
-+                if (isValid) {
-+                    logger.info(`[Razorpay Webhook] Webhook signature verified successfully`);
-+                } else {
-+                    logger.warn(`[Razorpay Webhook] Webhook signature verification failed for signature: ${webhookSignature}`);
-+                }
-+            } catch (err) {
-+                logger.warn(`[Razorpay Webhook] Error verifying signature: ${err?.message}`);
-             }
++        // Anyone can POST to the webhook URL, so an event is only acted on when
++        // its signature checks out. Ignored rather than FAILED: a forged event
++        // must not be able to fail a real payment either.
++        if (!webhookSignature || !webhookSecret || !rawPayload) {
++            logger.warn(`[Razorpay Webhook] Rejected: cannot verify signature (signature: ${!!webhookSignature}, secret: ${!!webhookSecret}, rawData: ${!!rawPayload})`);
++            return { action: utils_1.PaymentActions.NOT_SUPPORTED };
++        }
++        let isValid = false;
+         try {
+-            if (!webhookSignature || !webhookSecret) {
+-                return { action: utils_1.PaymentActions.FAILED };
+-            }
 -            const validationResponse = razorpay_1.default.validateWebhookSignature(webhookData.rawData.toString(), webhookSignature, webhookSecret);
 -            // return if validation fails
 -            if (!validationResponse) {
 -                return { action: utils_1.PaymentActions.FAILED };
-+        } else {
-+            logger.warn(`[Razorpay Webhook] Webhook signature validation skipped (signature: ${!!webhookSignature}, secret: ${!!webhookSecret}, rawData: ${!!rawPayload})`);
++            isValid = razorpay_1.default.validateWebhookSignature(rawPayload, webhookSignature, webhookSecret);
++        } catch (err) {
++            logger.warn(`[Razorpay Webhook] Error verifying signature: ${err?.message}`);
 +        }
++        if (!isValid) {
++            logger.warn(`[Razorpay Webhook] Rejected: invalid signature`);
++            return { action: utils_1.PaymentActions.NOT_SUPPORTED };
++        }
++        logger.info(`[Razorpay Webhook] Webhook signature verified successfully`);
 +
 +        const data = webhookData?.data || webhookData || {};
 +        const payload = data.payload || {};
@@ -452,7 +467,7 @@ index 3657949..32c045c 100644
                          amount: outstanding
                      }
                  };
-@@ -410,7 +550,7 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
+@@ -410,7 +556,7 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
                  return {
                      action: utils_1.PaymentActions.AUTHORIZED,
                      data: {
@@ -461,7 +476,7 @@ index 3657949..32c045c 100644
                          amount: outstanding
                      }
                  };
-@@ -418,11 +558,12 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
+@@ -418,11 +564,12 @@ class RazorpayBase extends utils_1.AbstractPaymentProvider {
                  return {
                      action: utils_1.PaymentActions.FAILED,
                      data: {

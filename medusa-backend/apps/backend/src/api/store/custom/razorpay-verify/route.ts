@@ -41,10 +41,12 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     }
 
     // --- Retrieve the key secret (server-side only) ---
+    // Same mode rule as medusa-config.ts: the secret must belong to the key
+    // set that created the Razorpay order, or every signature fails.
     let keySecret =
-      process.env.RAZORPAY_TEST_KEY_SECRET ??
-      process.env.RAZORPAY_KEY_SECRET ??
-      process.env.RAZORPAY_SECRET;
+      process.env.RAZORPAY_MODE === "live"
+        ? process.env.RAZORPAY_SECRET
+        : process.env.RAZORPAY_TEST_KEY_SECRET;
 
     if (keySecret) {
       keySecret = keySecret.trim();
@@ -52,7 +54,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 
     if (!keySecret) {
       console.error(
-        "[razorpay-verify] RAZORPAY_TEST_KEY_SECRET is not set in environment"
+        "[razorpay-verify] Razorpay key secret for the current RAZORPAY_MODE is not set"
       );
       return res.status(500).json({
         verified: false,
