@@ -7,6 +7,7 @@ import { getLocalizedPath } from '@lib/util/urls'
 import Wrapper from '@modules/checkout/components/payment-wrapper'
 import CheckoutForm from '@modules/checkout/templates/checkout-form'
 import CheckoutSummary from '@modules/checkout/templates/checkout-summary'
+import EmptyCartMessage from '@modules/cart/components/empty-cart-message'
 import { Container } from '@modules/common/components/container'
 
 export const metadata: Metadata = {
@@ -68,10 +69,15 @@ export default async function Checkout(props: {
 
   const cart = await fetchCart()
 
-  // If no cart exists (e.g. cart was just completed into an order and cleared),
-  // return null so server actions can cleanly complete without triggering an unexpected redirect interruption
+  // No cart: just completed into an order, or the cookie points at another
+  // customer's cart. Show the empty-bag message instead of a blank page;
+  // rendering (not redirecting) keeps an in-flight placeOrder() redirect intact.
   if (!cart) {
-    return null
+    return (
+      <Container className="flex min-h-[50vh] items-center justify-center py-16">
+        <EmptyCartMessage />
+      </Container>
+    )
   }
 
   return (
