@@ -55,7 +55,7 @@ const ForgotPassword = ({ setCurrentView }: Props) => {
       } else if (res === 'SUCCESS') {
         setSubmittedEmail(rawEmail)
         setIsSuccess(true)
-        toast('success', `Password reset link sent to ${rawEmail}`)
+        toast('success', 'If an account exists for this email, a reset link is on its way.')
       } else if (res) {
         setServerError(res)
         toast('error', res)
@@ -80,9 +80,9 @@ const ForgotPassword = ({ setCurrentView }: Props) => {
               Check your inbox
             </Heading>
             <Text className="text-gray-600 text-xs sm:text-sm leading-relaxed max-w-sm">
-              We've sent a password reset link to{' '}
-              <strong className="text-gray-900 font-semibold">{submittedEmail}</strong>.
-              Please check your inbox and spam folder to reset your password. The link is valid for 1 hour.
+              If an account exists for{' '}
+              <strong className="text-gray-900 font-semibold">{submittedEmail}</strong>, we've sent it a password
+              reset link. Please check your inbox and spam folder. The link is valid for 1 hour and works once.
             </Text>
           </Box>
 

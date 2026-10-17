@@ -1,6 +1,7 @@
-import { defineMiddlewares } from "@medusajs/framework/http"
+import { authenticate, defineMiddlewares } from "@medusajs/framework/http"
 import type { MedusaRequest, MedusaResponse, MedusaNextFunction } from "@medusajs/framework/http"
 import multer from "multer"
+import { singleUseResetToken } from "../lib/password-reset"
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -36,6 +37,16 @@ export default defineMiddlewares({
       matcher: "/admin/media",
       method: ["POST"],
       middlewares: [logoUploadMiddleware],
+    },
+    {
+      matcher: "/store/customer/change-password",
+      method: ["POST"],
+      middlewares: [authenticate("customer", ["bearer", "session"])],
+    },
+    {
+      matcher: "/auth/customer/emailpass/update",
+      method: ["POST"],
+      middlewares: [singleUseResetToken],
     },
   ],
 })

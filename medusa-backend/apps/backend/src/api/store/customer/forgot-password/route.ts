@@ -1,6 +1,7 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import jwt from "jsonwebtoken"
 import nodemailer from "nodemailer"
+import { passwordFingerprint } from "../../../../lib/password-reset"
 
 /**
  * POST /store/customer/forgot-password
@@ -28,12 +29,18 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       fields: ["id", "email", "first_name", "last_name"],
     })
 
+    // Same reply whether or not the account exists, so this form can't be
+    // used to find out which emails are registered.
+    const genericResponse = {
+      success: true,
+      message: "If an account exists for this email, a password reset link has been sent.",
+    }
+
     const customer = customers?.[0]
-    if (!customer) {
-      return res.status(404).json({
-        success: false,
-        message: "ACCOUNT_NOT_FOUND",
-      })
+    const fingerprint = customer ? await passwordFingerprint(req.scope, email) : null
+    if (!customer || !fingerprint) {
+      logger.info(`[forgot-password] No email/password account for requested address; nothing sent`)
+      return res.status(200).json(genericResponse)
     }
 
     // 2. Generate signed password reset JWT token
@@ -45,23 +52,12 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         entity_id: email,
         actor_type: "customer",
         provider: "emailpass",
+        // Ties the link to the current password so it works only once.
+        pwv: fingerprint,
       },
       jwtSecret,
       { expiresIn: "1h" }
     )
-
-    // Trigger Medusa internal auth reset-password workflow in background
-    const port = process.env.PORT || 9000
-    fetch(`http://localhost:${port}/auth/customer/emailpass/reset-password`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
-          ? { "x-publishable-api-key": process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY }
-          : {}),
-      },
-      body: JSON.stringify({ identifier: email }),
-    }).catch(() => null)
 
     const storefrontUrl = process.env.STOREFRONT_URL || "http://localhost:8000"
     const resetUrl = `${storefrontUrl}/in/reset-password?email=${encodeURIComponent(email)}&token=${encodeURIComponent(resetToken)}`
@@ -157,10 +153,7 @@ Link valid for 1 hour.
 
     logger.info(`📧 Password reset email delivered successfully to ${email}`)
 
-    return res.status(200).json({
-      success: true,
-      message: "Password reset link sent successfully",
-    })
+    return res.status(200).json(genericResponse)
   } catch (error: any) {
     logger.error(`[forgot-password] Error delivering reset email: ${error.message}`, error)
     return res.status(500).json({
